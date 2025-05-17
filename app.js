@@ -6,6 +6,7 @@ const logger = require('./utils/logger')('App')
 const userRouter = require('./routes/user')
 const organizerRouter = require('./routes/organizer')
 const ordersRouter = require('./routes/orders')
+const adminRouter = require('./routes/admin')
 
 const app = express()
 app.use(cors())
@@ -34,6 +35,7 @@ app.get('/', (req, res) => {
 app.use('/api/v1/users', userRouter)
 app.use('/api/v1/organizer', organizerRouter)
 app.use('/api/v1/orders', ordersRouter)
+app.use('/api/v1/admin', adminRouter)
 
 
 // eslint-disable-next-line no-unused-vars

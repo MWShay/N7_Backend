@@ -3,14 +3,13 @@ const logger = require('../utils/logger')('Admin')
 const appError = require('../utils/appError')
 
 const { dataSource } = require('../db/data-source')
-const {isUndefined, isNotValidString, isNotValidInteger} = require('../utils/validUtils')
 const bcrypt = require('bcrypt')
-const isAuth = require('../middleware/isAuth')
+const isAuth = require('../middlewares/auth')({
+    secret: config.get('secret').jwtSecret,
+    userRepository: dataSource.getRepository('User'),
+    logger
+  })
 
-const { dataSource } = require('../db/data-source')
-const config = require('../config/index')
-const appError = require('../utils/appError')
-const { dataSource } = require('../db/data-source')
 const { getOrdersData,getSingleOrderData } = require('../services/orderService')
 const { proposeEventValid,isUndefined,isNotValidString,isNotValidUuid } = require('../utils/validUtils');
 

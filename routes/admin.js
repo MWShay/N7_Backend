@@ -1,17 +1,21 @@
 const express = require('express')
-
-
+const config = require('../config/index')
+const logger = require('../utils/logger')('User')
 const router = express.Router()
 const { dataSource } = require('../db/data-source')
-const logger = require('../utils/logger')('Admin')
+// const logger = require('../utils/logger')('Admin')
 const  appError = require('../utils/appError')
-const isAuth = require('../middleware/isAuth')
+// const isAuth = require('../middleware/isAuth')
 // const isCoach = require('../middleware/isCoach')
 const {isUndefined, isNotValidString, isNotValidInteger} = require('../utils/validUtils')
 const handleErrorAsync = require('../utils/handleErrorAsync')
 const adminController = require('../controllers/admin')
 
-
+const isAuth = require('../middlewares/auth')({
+    secret: config.get('secret').jwtSecret,
+    userRepository: dataSource.getRepository('User'),
+    logger
+  })
 // 26.取得所有一般會員資料
 router.get('/admin/users', isAuth, handleErrorAsync(adminController.getAllUsers))
 
