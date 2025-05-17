@@ -21,7 +21,10 @@ const adminController = {
 
         const userRepository = dataSource.getRepository('User')
         const users = await userRepository.find({
-            select: ['serialNo', 'name', 'role', 'count'],
+            select: ['serialNo', 
+                'name', 
+                'role', 
+                'count'],
             where: { role: 'USER' }
         });
 
@@ -76,21 +79,44 @@ const adminController = {
     //新增活動審核 no.28
     async patchEvent(req, res) {
         const { eventId } = req.params
+        const { status } = req.body
         if (isUndefined(eventId) || isNotValidString(eventId) || isNotValidUuid(eventId)) {
             next(appError(ERROR_STATUS_CODE, '欄位未填寫正確'))
             return
         }
+
+        if (isUndefined(status) || isNotValidString(status)) {
+            next(appError(ERROR_STATUS_CODE, '狀態欄位未填寫正確'));
+            return;
+        }
+
         const eventRepository = dataSource.getRepository('Event')
         const event = await eventRepository.findOne({
             select: ['id', 'title', 'cover_image_url', 'section_image_url', 'created_at', 'updated_at', 'status'],
             where: { id: eventId }
         })
+        
+        // 更新活動的 status
+        const updateResult = await eventRepository.update(
+            { id: eventId },
+            { status }
+        );
 
+        if (updateResult.affected === 0) {
+            logger.warn('更新活動狀態失敗');
+            return next(appError(400, '更新活動狀態失敗'));
+        }
+
+        const updatedEvent = await eventRepository.findOne({
+            select: ['id', 'title', 'status'],
+            where: { id: eventId }
+        });
+    
         res.status(200).json({
             status: true,
-            message: "審核活動成功",
-            data: event
-        })
+            message: "活動狀態更新成功",
+            data: updatedEvent
+        });
     },
 
     //取得單一會員資料 no.30
@@ -125,10 +151,7 @@ const adminController = {
             next(appError(ERROR_STATUS_CODE, '欄位未填寫正確'))
             return
         }
-        if (role !== 'COACH' && role !== 'USER') {
-            next(appError(ERROR_STATUS_CODE, '欄位未填寫正確'))
-            return
-        }
+
         const userRepository = dataSource.getRepository('User')
         const existingUser = await userRepository.findOne({
             select: ['id', 'name', 'email', 'role'],
@@ -142,7 +165,7 @@ const adminController = {
 
         const updatedUser = await userRepository.patch({
             id: userId,
-            role: 'USER'
+            role: 'BLOCKED'
         }, {
             role
         })
@@ -150,15 +173,7 @@ const adminController = {
             logger.warn('更新使用者失敗')
             return next(appError(400, '更新使用者失敗'))
         }
-        const savedUser = await userRepository.findOne({
-            select: ['name', 'role'],
-            where: { id: userId }
-        })
-        res.status(200).json({
-            status: true,
-            message: "編輯成功",
-            data: savedUser
-        })
+
     }
 }
 module.exports = adminController
