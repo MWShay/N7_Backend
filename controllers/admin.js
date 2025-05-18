@@ -20,13 +20,26 @@ const adminController = {
     async getAllUsers(req, res) {
 
         const userRepository = dataSource.getRepository('User')
-        const users = await userRepository.find({
-            select: ['serialNo', 
-                'name', 
-                'role', 
-                'count'],
-            where: { role: 'USER' }
-        });
+        const users= await userRepository
+            .createQueryBuilder('u')
+            .leftJoin('Orders', 'o', 'u.id = o.user_id') // 假設 Orders 表中有 user_id 外鍵
+            .select([
+                'u.serialNo AS serialNo',
+                'u.name AS name',
+                'u.role AS role',
+                'COUNT(o.id) AS count' // 計算每個使用者的購買數量
+            ])
+            .where('u.role = :role', { role: 'GENERAL' }) // 過濾角色為 GENERAL 的使用者
+            .groupBy('u.id') // 按使用者分組
+            .getRawMany(); // 獲取原始結果
+            
+        // const users = await userRepository.find({
+        //     select: ['serialNo', 
+        //         'name', 
+        //         'role', 
+        //         'count'],
+        //     where: { role: 'GENERAL' }
+        // });
 
         res.status(200).json({
             status: 'success',
