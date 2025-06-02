@@ -6,9 +6,13 @@ const logger = require('./utils/logger')('App')
 const userRouter = require('./routes/user')
 const organizerRouter = require('./routes/organizer')
 const ordersRouter = require('./routes/orders')
+<<<<<<< HEAD
+const adminRouter = require('./routes/admin')
+=======
 const indexRouter = require('./routes/index')
 const eventsRouter = require('./routes/events')
 const googleRouter = require('./routes/google')
+>>>>>>> d09edba9c05a607b030851c9e2d105be660c5e0d
 
 const app = express()
 
@@ -43,9 +47,14 @@ app.get('/', (req, res) => {
 app.use('/api/v1/users', userRouter)
 app.use('/api/v1/organizer', organizerRouter)
 app.use('/api/v1/orders', ordersRouter)
+<<<<<<< HEAD
+app.use('/api/v1/admin', adminRouter)
+
+=======
 app.use('/api/v1/events', eventsRouter)
 app.use('/api/v1/google', googleRouter)
 app.use('/api/v1/', indexRouter)
+>>>>>>> d09edba9c05a607b030851c9e2d105be660c5e0d
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
