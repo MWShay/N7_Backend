@@ -19,6 +19,12 @@ module.exports = new EntitySchema({
       length: 100,
       nullable: false
     },
+    city: {
+      type: "varchar",
+      length: 10,
+      nullable: false,
+      default: '台北市'
+    },
     address: {
       type: "varchar",
       length: 100,
@@ -63,11 +69,6 @@ module.exports = new EntitySchema({
       nullable: false,
       default: 0
     },
-    type: {
-      type: "varchar",
-      length: 50,
-      nullable: false
-    },
     status: { 
       type: "varchar",
       length: 10,
@@ -88,8 +89,10 @@ module.exports = new EntitySchema({
     check_at: {
       type: "timestamp",
       nullable: true
-    },
-    user_id: {
+    },user_id: {
+      type: "uuid",
+      nullable: false
+    },type_id: {
       type: "uuid",
       nullable: false
     }
@@ -103,7 +106,8 @@ module.exports = new EntitySchema({
         name: "user_id",
         referencedColumnName: 'id',
         foreignKeyConstraintName: 'event_user_id_fk'
-      }
+      },
+      onDelete: 'RESTRICT',
     },
     Order: {
       type: "one-to-many",
@@ -114,6 +118,17 @@ module.exports = new EntitySchema({
       type: "one-to-many",
       target: "Section",
       inverseSide: "Event"
-    }
+    },
+    Type: {
+      target: "Type",
+      type: "many-to-one",
+      inverseSide: "Event",
+      joinColumn: {
+        name: "type_id",
+        referencedColumnName: 'id',
+        foreignKeyConstraintName: 'event_type_id_fk'
+      },
+      onDelete: "RESTRICT"
+    },
   }
 });

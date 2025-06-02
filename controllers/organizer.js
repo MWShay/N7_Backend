@@ -3,10 +3,13 @@ const config = require('../config/index')
 const logger = require('../utils/logger')('Organizer')
 const appError = require('../utils/appError')
 const { dataSource } = require('../db/data-source')
-const { createNewEvent,updateEvent,getEditEventData,getOrgEventsData,getOneOrgEventData } = require('../services/eventService')
+const { verifyTicket } = require('../services/ticketService')
+const { createNewEvent,updateEvent,getEditEventData,getOrgEventsData,getOneOrgEventData, getStausOrgEventsData } = require('../services/eventService')
 const { uploadImage } = require('../utils/imageUtils')
 const { proposeEventValid,isUndefined,isNotValidString,isNotValidUuid } = require('../utils/validUtils');
-
+const { decodeTicketQrcode } = require('../utils/qrcodeUtils')
+const { EVENT_STATUS, EVENT_CHINESE_STATUS } = require('../enums/index')
+const { extractAndValidateCity } = require('../utils/cityUtils')
 const ERROR_STATUS_CODE = 400;
 
 const postEvent = async (req, res, next) => {
@@ -18,6 +21,14 @@ const postEvent = async (req, res, next) => {
       next( appError(ERROR_STATUS_CODE, errorMessages ) );
       return;
     }
+
+    const city = extractAndValidateCity(result.data.address)
+    if( !city ){
+      logger.error(`[postEvent]擷取地址中縣市失敗`);
+      next( appError(ERROR_STATUS_CODE, '地址未填寫正確' ) );
+      return;
+    }
+    result.data.city = city
 
     //新增活動
     const {savedEvent,
@@ -53,6 +64,13 @@ const putEvent = async (req, res, next) => {
       next( appError(ERROR_STATUS_CODE, errorMessages ) );
       return;
     }
+    const city = extractAndValidateCity(result.data.address)
+    if( !city ){
+      logger.error(`[putEvent]擷取地址中縣市失敗`);
+      next( appError(ERROR_STATUS_CODE, '地址未填寫正確' ) );
+      return;
+    }
+    result.data.city = city
 
     //編輯活動
     const {savedEvent} = await updateEvent(result.data, eventId, req.user.id)
@@ -74,12 +92,12 @@ const putEvent = async (req, res, next) => {
 
 const getEvents = async (req, res, next) => {
     const orgUserId = req.user.id
-    const groupedOrders = await getOrgEventsData(orgUserId)
+    const events = await getOrgEventsData(orgUserId)
 
     res.status(200).json({
         status: true,
         message: "取得活動列表成功",
-        data: groupedOrders
+        data: events
     })
 }
 
@@ -90,12 +108,12 @@ const getEvent = async (req, res, next) => {
         return
     }
     const orgUserId = req.user.id
-    const order = await getOneOrgEventData(orgUserId, eventId)
+    const event = await getOneOrgEventData(orgUserId, eventId)
 
     res.status(200).json({
         status: true,
         message: "取得活動列表成功",
-        data: order
+        data: event
     })
 }
 
@@ -106,22 +124,68 @@ const getEditEvent = async (req, res, next) => {
         return
     }
     const orgUserId = req.user.id
-    const order = await getEditEventData(orgUserId, eventId)
+    const event = await getEditEventData(orgUserId, eventId)
 
     res.status(200).json({
         status: true,
         message: "取得資料成功",
-        data: order
+        data: event
     })
 }
 
 const postImage = async  (req, res, next)=> {
     const imageUrl = await uploadImage(req)
     res.status(201).json({
-        status: 'success',
+        status: true,
+        message:"上傳成功",
         data: {
             image_url: imageUrl
         }
+    })
+}
+
+const patchTicket = async  (req, res, next)=> {
+    const orgUserId = req.user.id;
+    const { orgEventId } = req.params
+    const token = req.query.token
+    if (isUndefined(orgEventId) || isNotValidString(orgEventId) || isNotValidUuid(orgEventId) 
+        || isUndefined(token) || isNotValidString(token)) {
+        next(appError(ERROR_STATUS_CODE, '欄位未填寫正確'))
+        return
+    }
+    try{
+        const ticketInfo =await decodeTicketQrcode(token)
+        const formatTicket = await verifyTicket(ticketInfo, orgEventId, orgUserId)
+        res.status(201).json({
+            status: true,
+            message:"驗票成功",
+            data: {
+                ...formatTicket
+            }
+        })
+    }
+    catch(error){
+        if(error.status) throw error
+        throw appError(ERROR_STATUS_CODE, '驗證發生錯誤！請再次掃描')
+    }
+}
+
+const getStatusEvents = async (req, res, next) => {
+        
+    const orgUserId = req.user.id
+    const queryStatus = req.query.status
+
+    if ( queryStatus instanceof Array || ( queryStatus !== undefined && !EVENT_STATUS[ queryStatus?.toUpperCase() ] ) ) {
+        next(appError(ERROR_STATUS_CODE, '欄位未填寫正確'))
+        return
+    }
+
+    const events = await getStausOrgEventsData(orgUserId, queryStatus)
+
+    res.status(200).json({
+        status: true,
+        message: `取得${EVENT_CHINESE_STATUS[ queryStatus ]}活動成功`,
+        data: events
     })
 }
 
@@ -131,5 +195,7 @@ module.exports = {
     getEvents,
     getEvent,
     getEditEvent,
-    postImage
+    postImage,
+    patchTicket,
+    getStatusEvents
 }

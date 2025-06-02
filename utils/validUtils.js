@@ -1,5 +1,11 @@
 const { z } = require('zod');
 const { toDate } = require('./timeUtils')
+const config = require('../config/index')
+const allowedDomains = [
+  'http://localhost',
+  config.get('google').redirectAllowDomain
+];
+
 
 const isValidString = (value) => {
   return typeof value === 'string' && value.trim() !== '';
@@ -52,6 +58,18 @@ const isValidUrl = (value) => {
   }
 }
 
+function isRedirectUriAllowed(redirectUri) {
+  try {
+    if(redirectUri === '' || redirectUri === undefined) return true
+    const parsedUrl = new URL(redirectUri);
+    const origin = parsedUrl.origin.startsWith('http://localhost') ? 'http://localhost' : parsedUrl.origin;
+    return allowedDomains.includes(origin);
+
+  } catch (err) {
+    return false; // 無法解析 URL 就直接拒絕
+  }
+}
+
 // 提交活動欄位驗證
 const proposeEventValid  = z.object({
   title: z.string({
@@ -89,9 +107,11 @@ const proposeEventValid  = z.object({
   description: z.string({
     required_error: '活動介紹未填寫正確', invalid_type_error: '活動介紹未填寫正確'
   }).min(1, '活動介紹未填寫正確'),
-  type: z.string({
-    required_error: '活動類型未填寫正確',invalid_type_error: '活動類型未填寫正確'
-  }).min(1, '活動類型未填寫正確'),
+  type_id: z
+    .string({
+      required_error: '活動類型未填寫正確',
+      invalid_type_error: '活動類型未填寫正確',
+    }).uuid('活動類型未填寫正確'),
   cover_image_url: z
     .any()
     .refine(
@@ -144,7 +164,9 @@ module.exports = {
   isNotValidInteger,
   isValidName,
   isNotValidUuid,
-  proposeEventValid
+  proposeEventValid,
+  isValidUrl,
+  isRedirectUriAllowed
 }
 
 
